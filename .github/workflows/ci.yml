@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   deps:
-    name: Install dependencies
+    name: Setup Cache
     runs-on: ubuntu-20.04
     steps:
       - name: Code checkout
@@ -14,7 +14,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.mod
-      - run: go version
+      - run: go mod download
 
   test:
     name: Run tests
