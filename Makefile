@@ -19,26 +19,25 @@ rm::
 	@docker rm -f lilurl
 
 
+SERVICE:='lilurl'
 # Create tag for image
 # Applicable to artifact registry images
 ifdef GITHUB_RUN_NUMBER
-	TAG := ${GITHUB_RUN_NUMBER}-${GITHUB_REF_NAME}
+	TAG:=${GITHUB_RUN_NUMBER}-${GITHUB_REF_NAME}
 endif
 
 # Build image for artifact registry
 build-ar::
-	SERVIVE := lilurl
-	GAR := ${GCP_REGISTRY}
+	GAR:=${GCP_REGISTRY}
 
-	@docker build -t $(GAR)/$(SERVIVE):$(TAG) -f Dockerfile.app .
+	@docker build -t $(GAR)/$(SERVICE):$(TAG) -f Dockerfile.app .
 
 
 # Push image to artifact registry
 push-ar::
-	SERVIVE := lilurl
 	GAR := ${GCP_REGISTRY}
 
-	@docker push $(GAR)/$(SERVIVE):$(TAG)
+	@docker push $(GAR)/$(SERVICE):$(TAG)
 
 
 
