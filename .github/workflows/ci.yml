@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Code checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - uses: setup-go@v5
         with:
@@ -23,7 +23,7 @@ jobs:
       - deps
     steps:
       - name: Code checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - uses: setup-go@v5
         with:
@@ -42,7 +42,7 @@ jobs:
       - test
     steps:
       - name: Code checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
         id: auth
