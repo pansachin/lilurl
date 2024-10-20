@@ -1,0 +1,76 @@
+name: "ci"
+
+on: [push]
+
+jobs:
+  deps:
+    name: Install dependencies
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+
+      - uses: setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.mod
+      - run: go version
+
+  test:
+    name: Run tests
+    runs-on: ubuntu-20.04
+    needs:
+      - deps
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+
+      - uses: setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.mod
+      - run: go version
+
+      - name: Run tests
+        run: go test -v ./...
+
+  build-push:
+    name: Build, Push
+    runs-on: ubuntu-20.04
+    needs:
+      - deps
+      - test
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ vars.IDF_PROVIDER }}
+          service_account: ${{ vars.SERVICE_ACCOUNT }}
+          audience: ${{ vars.WORKLOAD_IDF_AUDIENCE}}
+
+      - name: Login to Google Artifact Registry in us
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.GCP_REGISTRY }}
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Build
+        run: make build-ar
+        env:
+          GAR: ${{ vars.GCP_REGISTRY}}
+
+      - name: Push
+        run: make push-ar
+        env:
+          GAR: ${{ vars.GCP_REGISTRY}}
+
+
+    
+ 
+ 
