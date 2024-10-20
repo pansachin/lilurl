@@ -26,7 +26,7 @@ ifdef GITHUB_RUN_NUMBER
 endif
 
 # Build image for artifact registry
-build-gar::
+build-ar::
 	SERVIVE := lilurl
 	GAR := ${GCP_REGISTRY}
 
@@ -34,7 +34,7 @@ build-gar::
 
 
 # Push image to artifact registry
-push-gar::
+push-ar::
 	SERVIVE := lilurl
 	GAR := ${GCP_REGISTRY}
 
