@@ -69,8 +69,4 @@ jobs:
         run: make push-ar
         env:
           GAR: ${{ vars.GCP_REGISTRY}}
-
-
-    
- 
  
