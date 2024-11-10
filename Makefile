@@ -35,6 +35,9 @@ build-ar::
 push-ar::
 	@docker push $(GAR)/$(SERVICE):$(TAG)
 
+migrate::
+	@dbmate up 
+
 
 
 
