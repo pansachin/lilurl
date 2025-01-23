@@ -28,7 +28,7 @@ endif
 
 # Build image for artifact registry
 build-ar::
-	@docker build -t $(GAR)/$(SERVICE):$(TAG) -f Dockerfile.app .
+	@docker build -t $(GAR)/$(SERVICE):$(TAG) -f App.Dockerfile .
 
 
 # Push image to artifact registry
