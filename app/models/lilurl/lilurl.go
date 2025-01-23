@@ -1,31 +1,12 @@
 package model
 
 import (
-	"time"
 	"unsafe"
 
 	validate "github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 	store "github.com/pansachin/lilurl/app/models/lilurl/db"
 )
-
-// LilURL model
-type LilURL struct {
-	ID        int        `json:"id" validate:"required"`
-	Long      string     `json:"long_url" validate:"required"`
-	Short     string     `json:"short" validate:"required"`
-	CreatedAt time.Time  `json:"created_at" validate:"required"`
-	UpdatedAt time.Time  `json:"updated_at" validate:"required"`
-	DeletedAt *time.Time `json:"deleted_at" validate:"required"`
-}
-
-// CreateLilURL model
-type CreateLilURL struct {
-	Long      string    `json:"long_url" validate:"required"`
-	Short     string    `json:"short" validate:"required"`
-	CretedAt  time.Time `json:"created_at" validate:"required"`
-	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-}
 
 type Core struct {
 	db *store.Store
@@ -56,6 +37,23 @@ func (c *Core) Create(payload CreateLilURL) (LilURL, error) {
 		return LilURL{}, err
 	}
 	return toLilURL(result), nil
+}
+
+// Create creates a new lilurl in the database
+func (c *Core) Update(payload UpdateLilURL) error {
+	if err := validate.New().Struct(payload); err != nil {
+		return err
+	}
+
+	data := store.LilURL{
+		ID:        payload.ID,
+		Short:     payload.Short,
+		UpdatedAt: payload.UpdatedAt,
+	}
+
+	err := c.db.Update(data)
+
+	return err
 }
 
 // GetByID retrieves a lilurl by its ID

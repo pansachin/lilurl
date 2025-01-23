@@ -5,6 +5,7 @@ import (
 	"log/slog"
 )
 
+// NewDevelopmentLogger creates a new development logger
 func NewDevelopmentLogger(w io.Writer) *slog.Logger {
 	handler := slog.NewTextHandler(w,
 		&slog.HandlerOptions{
@@ -16,6 +17,7 @@ func NewDevelopmentLogger(w io.Writer) *slog.Logger {
 	return slog.New(handler)
 }
 
+// NewProductionLogger creates a new production logger
 func NewProductionLogger(w io.Writer) *slog.Logger {
 	handler := slog.NewJSONHandler(w,
 		&slog.HandlerOptions{

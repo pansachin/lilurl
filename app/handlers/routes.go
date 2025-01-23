@@ -10,12 +10,15 @@ func RegisterRoutes(app *fiber.App, db *sqlx.DB) {
 	// Initialize the handler
 	h := lilurl.NewHandler(db)
 
-	// Get a url by short url
-	app.Get("/:lilurl", h.GetByShortURL)
+	// UR redirection
+	app.Get("/:lilurl", h.Get)
+
+	// Get details by short url
+	app.Get("/api/v1/:lilurl", h.GetByShortURL)
 
 	// Get a details by id
-	app.Get("/v1/:id", h.GetByID)
+	app.Get("/api/v1/:id", h.GetByID)
 
 	// Create a new short url
-	app.Post("/v1/lilurl", h.Post)
+	app.Post("/api/v1/lilurl", h.Create)
 }

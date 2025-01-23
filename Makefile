@@ -38,6 +38,3 @@ push-ar::
 migrate::
 	@dbmate up 
 
-
-
-

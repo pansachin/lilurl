@@ -1,7 +1,6 @@
 package lilurl
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -21,7 +20,7 @@ func NewHandler(db *sqlx.DB) *Handler {
 	}
 }
 
-func (h *Handler) Post(c fiber.Ctx) error {
+func (h *Handler) Create(c fiber.Ctx) error {
 	var payload model.CreateLilURL
 
 	if err := c.Bind().Body(&payload); err != nil {
@@ -31,7 +30,6 @@ func (h *Handler) Post(c fiber.Ctx) error {
 	now := time.Now().Truncate(time.Second)
 	payload.CretedAt = now
 	payload.UpdatedAt = now
-	payload.Short = fmt.Sprintf("%v", time.Now().Unix())
 	res, err := h.db.Create(payload)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -91,4 +89,24 @@ func (h *Handler) GetByShortURL(c fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"result": res,
 	})
+}
+
+// Get return the original URL by lilurl
+func (h *Handler) Get(c fiber.Ctx) error {
+	lilurl := c.Params("lilurl")
+	if lilurl == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "hash is required",
+		})
+	}
+
+	res, err := h.db.GetByShortURL(lilurl)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	c.Response().Header.Add("Location", res.Long)
+	return c.Status(fiber.StatusTemporaryRedirect).Send(nil)
 }
