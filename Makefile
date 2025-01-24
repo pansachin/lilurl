@@ -1,6 +1,6 @@
 # Build local image
 build::
-	@docker build  -t lilurl:latest -f app.Dockerfile .
+	@docker build  -t lilurl:latest -f Dockerfile .
 
 # Run local image
 run:: build
@@ -28,7 +28,7 @@ endif
 
 # Build image for artifact registry
 build-ar::
-	@docker build -t $(GAR)/$(SERVICE):$(TAG) -f app.Dockerfile .
+	@docker build -t $(GAR)/$(SERVICE):$(TAG) -f Dockerfile .
 
 
 # Push image to artifact registry
