@@ -41,5 +41,6 @@ func run(logger *slog.Logger) error {
 		// EnablePrefork:     true,
 		EnablePrintRoutes: true,
 	})
+
 	return nil
 }

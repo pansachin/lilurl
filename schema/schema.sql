@@ -9,4 +9,5 @@ CREATE TABLE urls(
 );
 -- Dbmate schema migrations
 INSERT INTO "schema_migrations" (version) VALUES
-  ('20241101185309');
+  ('20241101185309'),
+  ('20241110163810');

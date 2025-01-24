@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/pansachin/lilurl/internal/pkg/generator"
 )
 
 // LilURL model
@@ -47,7 +48,32 @@ func (s *Store) Create(data LilURL) (LilURL, error) {
 		return LilURL{}, err
 	}
 
+	// Generate short url
+	data.Short = generator.Generator(id)
+
+	// Update record with short url ID
+	data.ID = int(id)
+	if err := s.Update(data); err != nil {
+		return LilURL{}, err
+	}
+
 	return s.GetByID(id)
+}
+
+// Update updates an existing lilurl in the database
+func (s *Store) Update(data LilURL) error {
+	q := `
+		UPDATE
+			urls
+		SET
+			short = :short,
+			updated_at = :updated_at
+		WHERE
+			id = :id`
+
+	_, err := sqlx.NamedExecContext(context.Background(), s.db, q, &data)
+
+	return err
 }
 
 // GetByID retrieves a lilurl by its ID
