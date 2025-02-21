@@ -1,0 +1,15 @@
+app:
+  name: "lilurl"
+  host: "localhost"
+  port: 3000
+db:
+  instance: "sqlite3"
+  port: "3001"
+  user: "user"
+  password: "password"
+  database: "lilurl"
+log:
+  debug: true
+  json: true
+  clolour: true
+  print_routes: false
