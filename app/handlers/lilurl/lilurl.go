@@ -1,6 +1,7 @@
 package lilurl
 
 import (
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -10,13 +11,15 @@ import (
 )
 
 type Handler struct {
-	db *model.Core
+	db     *model.Core
+	logger *slog.Logger
 }
 
 // NewHandler initializes a new handler
-func NewHandler(db *sqlx.DB) *Handler {
+func NewHandler(db *sqlx.DB, logger *slog.Logger) *Handler {
 	return &Handler{
-		db: model.New(db),
+		db:     model.New(db, logger),
+		logger: logger,
 	}
 }
 

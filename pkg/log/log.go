@@ -21,8 +21,8 @@ func NewDevelopmentLogger(w io.Writer) *slog.Logger {
 func NewProductionLogger(w io.Writer) *slog.Logger {
 	handler := slog.NewJSONHandler(w,
 		&slog.HandlerOptions{
-			AddSource: true,
-			Level:     slog.LevelDebug,
+			AddSource: false,
+			Level:     slog.LevelInfo,
 		},
 	)
 

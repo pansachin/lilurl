@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -20,13 +21,15 @@ type LilURL struct {
 
 // Store
 type Store struct {
-	db sqlx.ExtContext
+	db     sqlx.ExtContext
+	logger *slog.Logger
 }
 
 // New creates a new model
-func New(db *sqlx.DB) *Store {
+func New(db *sqlx.DB, logger *slog.Logger) *Store {
 	return &Store{
-		db: db,
+		db:     db,
+		logger: logger,
 	}
 }
 
@@ -37,6 +40,10 @@ func (s *Store) Create(data LilURL) (LilURL, error) {
 		urls (long_url, short, created_at, updated_at, deleted_at)
 	VALUES
 		(:long_url, :short, :created_at, :updated_at, :deleted_at)`
+
+	// Log query
+	str, values, err := sqlx.Named(q, &data)
+	s.logger.Debug("insert query", "str", str, "values", values, "err", err)
 
 	res, err := sqlx.NamedExecContext(context.Background(), s.db, q, &data)
 	if err != nil {
@@ -71,7 +78,11 @@ func (s *Store) Update(data LilURL) error {
 		WHERE
 			id = :id`
 
-	_, err := sqlx.NamedExecContext(context.Background(), s.db, q, &data)
+	// Log query
+	str, values, err := sqlx.Named(q, &data)
+	s.logger.Debug("insert query", "str", str, "values", values, "err", err)
+
+	_, err = sqlx.NamedExecContext(context.Background(), s.db, q, &data)
 
 	return err
 }
@@ -98,6 +109,10 @@ func (s *Store) GetByID(id int64) (LilURL, error) {
 		urls
 	WHERE
 		id = :id`
+
+	// Log query
+	str, values, err := sqlx.Named(q, &args)
+	s.logger.Debug("insert query", "str", str, "values", values, "err", err)
 
 	rows, err := sqlx.NamedQueryContext(context.Background(), s.db, q, &args)
 	if err != nil {
@@ -135,6 +150,10 @@ func (s *Store) GetByShortURL(short string) (LilURL, error) {
 		urls
 	WHERE
 		short = :short`
+
+	// Log query
+	str, values, err := sqlx.Named(q, &short)
+	s.logger.Debug("insert query", "str", str, "values", values, "err", err)
 
 	rows, err := sqlx.NamedQueryContext(context.Background(), s.db, q, &args)
 	if err != nil {

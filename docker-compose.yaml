@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 services:
   lilurl:
@@ -13,7 +13,7 @@ services:
       - back-tier
     # depends_on:
     #   - db
-  
+
   # db:
   #   container_name: db
   #   image: alpine:latest
@@ -38,10 +38,6 @@ services:
       - front-tier
     depends_on:
       - lilurl
-    
-    
-    
-
 
 networks:
   front-tier: {}

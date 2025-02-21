@@ -1,6 +1,7 @@
 package model
 
 import (
+	"log/slog"
 	"unsafe"
 
 	validate "github.com/go-playground/validator/v10"
@@ -9,13 +10,15 @@ import (
 )
 
 type Core struct {
-	db *store.Store
+	db     *store.Store
+	logger *slog.Logger
 }
 
 // New creates a new model
-func New(db *sqlx.DB) *Core {
+func New(db *sqlx.DB, logger *slog.Logger) *Core {
 	return &Core{
-		db: store.New(db),
+		db:     store.New(db, logger),
+		logger: logger,
 	}
 }
 

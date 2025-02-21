@@ -1,14 +1,17 @@
 package app
 
 import (
+	"log/slog"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/jmoiron/sqlx"
 	"github.com/pansachin/lilurl/app/handlers/lilurl"
 )
 
-func RegisterRoutes(app *fiber.App, db *sqlx.DB) {
+// Register routes
+func RegisterRoutes(app *fiber.App, db *sqlx.DB, log *slog.Logger) {
 	// Initialize the handler
-	h := lilurl.NewHandler(db)
+	h := lilurl.NewHandler(db, log)
 
 	// UR redirection
 	app.Get("/:lilurl", h.Get)
