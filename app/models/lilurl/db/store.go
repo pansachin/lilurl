@@ -55,8 +55,30 @@ func (s *Store) Create(data LilURL) (LilURL, error) {
 		return LilURL{}, err
 	}
 
-	// Generate short url
-	data.Short = generator.Generator(id)
+	// Check if short url exist in db
+	// If exists, regenerate short url
+	var (
+		exist = true
+		salt  string
+		long  = data.Long
+	)
+	for exist {
+		// Generate short url
+		short := generator.GeneratorSha256(long, salt)
+		s.logger.Debug("generated short url", "short", short)
+
+		// Check of short url exist
+		result, err := s.GetByShortURL(short)
+		if err != nil {
+			return LilURL{}, err
+		}
+		if result.ID == 0 {
+			// Regenerate short url
+			data.Short = short
+			exist = false
+		}
+		salt = generator.NewSalt()
+	}
 
 	// Update record with short url ID
 	data.ID = int(id)
@@ -80,7 +102,7 @@ func (s *Store) Update(data LilURL) error {
 
 	// Log query
 	str, values, err := sqlx.Named(q, &data)
-	s.logger.Debug("insert query", "str", str, "values", values, "err", err)
+	s.logger.Debug("updare data by id", "str", str, "values", values, "err", err)
 
 	_, err = sqlx.NamedExecContext(context.Background(), s.db, q, &data)
 
@@ -112,7 +134,7 @@ func (s *Store) GetByID(id int64) (LilURL, error) {
 
 	// Log query
 	str, values, err := sqlx.Named(q, &args)
-	s.logger.Debug("insert query", "str", str, "values", values, "err", err)
+	s.logger.Debug("get data by id", "str", str, "values", values, "err", err)
 
 	rows, err := sqlx.NamedQueryContext(context.Background(), s.db, q, &args)
 	if err != nil {
@@ -152,8 +174,8 @@ func (s *Store) GetByShortURL(short string) (LilURL, error) {
 		short = :short`
 
 	// Log query
-	str, values, err := sqlx.Named(q, &short)
-	s.logger.Debug("insert query", "str", str, "values", values, "err", err)
+	str, values, err := sqlx.Named(q, &args)
+	s.logger.Debug("get data by short url", "str", str, "values", values, "err", err)
 
 	rows, err := sqlx.NamedQueryContext(context.Background(), s.db, q, &args)
 	if err != nil {
