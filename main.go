@@ -47,6 +47,21 @@ func run(logger *slog.Logger) error {
 		AppName: cfg.App.Name,
 	})
 
+	// Configure CORS middleware
+	app.Use(func(c fiber.Ctx) error {
+		c.Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		c.Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Set("Access-Control-Allow-Credentials", "true")
+
+		// Handle preflight requests
+		if c.Method() == "OPTIONS" {
+			return c.SendStatus(fiber.StatusNoContent)
+		}
+
+		return c.Next()
+	})
+
 	logger.Info("registering routes")
 	// Register routes
 	routes.RegisterRoutes(app, db, logger)
