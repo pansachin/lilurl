@@ -35,6 +35,7 @@ build-ar::
 push-ar::
 	@docker push $(GAR)/$(SERVICE):$(TAG)
 
+# Migarte schema
 migrate::
 	@dbmate up 
 

@@ -1,8 +1,9 @@
-FROM golang:1.23-alpine as builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 COPY . .
 
-RUN CGO_ENABLED=off go build -o lilurl .
+RUN apk add --no-cache build-base && \
+  CGO_ENABLED=1 go build -o lilurl .
 
 CMD [ "./lilurl" ]

@@ -21,15 +21,17 @@ type LilURL struct {
 
 // Store
 type Store struct {
-	db     sqlx.ExtContext
-	logger *slog.Logger
+	db        sqlx.ExtContext
+	logger    *slog.Logger
+	generator *generator.ShortURLGenerator
 }
 
 // New creates a new model
 func New(db *sqlx.DB, logger *slog.Logger) *Store {
 	return &Store{
-		db:     db,
-		logger: logger,
+		db:        db,
+		logger:    logger,
+		generator: generator.NewShortURLGenerator(7, 10000), // 7 chars, cache up to 10k entries
 	}
 }
 
@@ -55,30 +57,21 @@ func (s *Store) Create(data LilURL) (LilURL, error) {
 		return LilURL{}, err
 	}
 
-	// Check if short url exist in db
-	// If exists, regenerate short url
-	var (
-		exist = true
-		salt  string
-		long  = data.Long
-	)
-	for exist {
-		// Generate short url
-		short := generator.GeneratorSha256(long, salt)
-		s.logger.Debug("generated short url", "short", short)
-
-		// Check of short url exist
+	// Use the generator to create a unique short URL
+	checkFunc := func(short string) (bool, error) {
 		result, err := s.GetByShortURL(short)
 		if err != nil {
-			return LilURL{}, err
+			return false, err
 		}
-		if result.ID == 0 {
-			// Regenerate short url
-			data.Short = short
-			exist = false
-		}
-		salt = generator.NewSalt()
+		return result.ID != 0, nil
 	}
+
+	shortURL, err := s.generator.Generate(data.Long, checkFunc)
+	if err != nil {
+		return LilURL{}, err
+	}
+	data.Short = shortURL
+	s.logger.Debug("generated short url", "short", shortURL)
 
 	// Update record with short url ID
 	data.ID = int(id)
