@@ -16,6 +16,7 @@ jobs:
           project-path: 'path-to-folder'
           enable-cache: 'true'
           refresh-cli: 'false'
+          devbox-version: '0.16.0'
 
       - name: Download dependencies
         run: devbox run deps
@@ -35,6 +36,7 @@ jobs:
           project-path: 'path-to-folder'
           enable-cache: 'true'
           refresh-cli: 'false'
+          devbox-version: '0.16.0'
 
       - name: Run tests
         run: devbox run test
@@ -58,6 +60,7 @@ jobs:
           project-path: 'path-to-folder'
           enable-cache: 'true'
           refresh-cli: 'false'
+          devbox-version: '0.16.0'
 
       # - uses: actions/setup-go@v5
       #   with:
