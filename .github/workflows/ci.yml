@@ -59,26 +59,26 @@ jobs:
         run: devbox run test
 
 
-    intergration-tests:
-      name: Run integration tests
-      runs-on: ubuntu-latest
-      needs:
-        - deps
-      steps:
-        - name: Code checkout
-          uses: actions/checkout@v4
-        - name: install dependencies
-          uses: jetify-com/devbox-install-action@v0.12.0
-          with:
-            enable-cache: 'true'
-            refresh-cli: 'false'
-            devbox-version: '0.16.0'
+  intergration-tests:
+    name: Run integration tests
+    runs-on: ubuntu-latest
+    needs:
+      - deps
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+      - name: install dependencies
+        uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: 'true'
+          refresh-cli: 'false'
+          devbox-version: '0.16.0'
 
-        - name: Run integration tests
-          run: |
-            devbox run up
-            curl --retry 5 --retry-delay 2 --retry-connrefused curl -v -H 'Content-Type: application/json' 'http://127.0.0.1:3000/api/v1/46O9Laf' | jq .
-            devbox run down
+      - name: Run integration tests
+        run: |
+          devbox run up
+          curl --retry 5 --retry-delay 2 --retry-connrefused curl -v -H 'Content-Type: application/json' 'http://127.0.0.1:3000/api/v1/46O9Laf' | jq .
+          devbox run down
 
   build-push:
     name: Build, Push
