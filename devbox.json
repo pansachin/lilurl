@@ -33,6 +33,15 @@
       ],
       "clean": [
         "task clean"
+      ],
+      "lint": [
+        "task lint"
+      ],
+      "deps": [
+        "task deps"
+      ],
+      "build-ar": [
+        "task build-ar"
       ]
     }
   }
