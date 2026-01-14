@@ -25,17 +25,17 @@ services:
   #   networks:
   #     - back-tier
 
-  proxy:
-    container_name: lilurl-proxy
-    image: nginx:alpine
-    volumes:
-      - ./proxy/nginx.conf:/etc/nginx/nginx.conf
-    ports:
-      - "80:80"
-    networks:
-      - front-tier
-    depends_on:
-      - lilurl
+  # proxy:
+  #   container_name: lilurl-proxy
+  #   image: nginx:alpine
+  #   volumes:
+  #     - ./proxy/nginx.conf:/etc/nginx/nginx.conf
+  #   ports:
+  #     - "80:80"
+  #   networks:
+  #     - front-tier
+  #   depends_on:
+  #     - lilurl
 
 networks:
   front-tier: {}
