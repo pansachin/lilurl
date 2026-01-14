@@ -13,7 +13,6 @@ jobs:
       - name: install dependencies
         uses: jetify-com/devbox-install-action@v0.12.0
         with:
-          project-path: 'path-to-folder'
           # enable-cache: 'true'
           refresh-cli: 'false'
           devbox-version: '0.16.0'
@@ -33,7 +32,6 @@ jobs:
       - name: install dependencies
         uses: jetify-com/devbox-install-action@v0.12.0
         with:
-          project-path: 'path-to-folder'
           # enable-cache: 'true'
           refresh-cli: 'false'
           devbox-version: '0.16.0'
@@ -57,7 +55,6 @@ jobs:
       - name: install dependencies
         uses: jetify-com/devbox-install-action@v0.12.0
         with:
-          project-path: 'path-to-folder'
           # enable-cache: 'true'
           refresh-cli: 'false'
           devbox-version: '0.16.0'
