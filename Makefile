@@ -11,10 +11,11 @@ run:: build
 test::
 	@go test -v ./...
 
-
-clean::
+down::
 	@docker-compose down
 
+up::
+	@docker-compose up -d
 rm::
 	@docker rm -f lilurl
 
@@ -39,3 +40,6 @@ push-ar::
 migrate::
 	@dbmate up 
 
+# lint
+lint::
+	@golangci-lint run ./...

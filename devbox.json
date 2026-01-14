@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": [
+    "dbmate@2.28.0",
+    "go@1.25.0",
+    "bat@0.26.1",
+    "go-task@3.45.5",
+    "curl@8.17.0",
+    "jq@1.8.1",
+    "colima@0.9.1",
+    "docker-client@29.1.3",
+    "docker-compose@5.0.0",
+    "golangci-lint@2.7.2",
+    "git@2.52.0"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo 'Welcome to devbox!' > /dev/null"
+    ],
+    "scripts": {
+      "build": [
+        "task build"
+      ],
+      "migrate": [
+        "task migrate"
+      ],
+      "run": [
+        "task run"
+      ],
+      "test": [
+        "task test"
+      ],
+      "clean": [
+        "task clean"
+      ],
+      "lint": [
+        "task lint"
+      ],
+      "deps": [
+        "task deps"
+      ],
+      "build-ar": [
+        "task build-ar"
+      ],
+      "up":[
+        "task up"
+      ],
+      "down":[
+        "task down"
+      ],
+      "integration-test":[
+        "task integration-test"
+      ]
+    }
+  }
+}

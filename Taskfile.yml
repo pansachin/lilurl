@@ -1,0 +1,89 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  SERVICE: lilurl
+  # Tag is set from GitHub Actions environment variables when available
+  TAG:
+    sh: |
+      if [ -n "$GITHUB_RUN_NUMBER" ]; then
+        echo "${GITHUB_RUN_NUMBER}-${GITHUB_REF_NAME}"
+      else
+        echo "latest"
+      fi
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build local Docker image
+    cmds:
+      - docker build -t lilurl:latest -f Dockerfile .
+
+  run:
+    desc: Run local Docker image
+    deps: [build]
+    cmds:
+      - docker run -d -p 3000:3000 --name lilurl lilurl:latest
+
+  test:
+    desc: Run Go tests
+    cmds:
+      - go test -v ./...
+
+  down:
+    desc: Stop and remove Docker Compose services
+    cmds:
+      - docker-compose down
+
+  up:
+    desc: Start Docker Compose services
+    cmds:
+      - docker-compose up -d
+
+  rm:
+    desc: Force remove lilurl Docker container
+    cmds:
+      - docker rm -f lilurl
+
+  build-ar:
+    desc: Build image for artifact registry
+    requires:
+      vars: [GAR]
+    cmds:
+      - docker build -t {{.GAR}}/{{.SERVICE}}:{{.TAG}} -f Dockerfile .
+
+  push-ar:
+    desc: Push image to artifact registry
+    requires:
+      vars: [GAR]
+    cmds:
+      - docker push {{.GAR}}/{{.SERVICE}}:{{.TAG}}
+
+  migrate:
+    desc: Run database migrations
+    cmds:
+      - dbmate up
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run ./... -v
+
+  deps:
+    desc: Install Go module dependencies
+    cmds:
+      - go mod download
+
+  integration-test:
+    desc: Run integration tests
+    cmds:
+      - colima start
+      - task: up
+      -  task: migrate
+      - "curl --retry 5 --retry-delay 2 --retry-connrefused -v -H 'Content-Type: application/json' 'http://127.0.0.1:3000/api/v1/46O9Laf' | jq ."
+      - task: down

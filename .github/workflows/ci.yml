@@ -5,41 +5,85 @@ on: [push]
 jobs:
   deps:
     name: Setup Cache
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: install dependencies
+        uses: jetify-com/devbox-install-action@v0.12.0
         with:
-          go-version-file: go.mod
-          cache-dependency-path: ./go.sum
-      - run: go mod download
+          enable-cache: 'true'
+          refresh-cli: 'false'
+          devbox-version: '0.16.0'
+
+      - name: Download dependencies
+        run: devbox run deps
+
+  lint:
+    name: Run linter
+    runs-on: ubuntu-latest
+    needs:
+      - deps
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
+      - name: install dependencies
+        uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: 'true'
+          refresh-cli: 'false'
+          devbox-version: '0.16.0'
+
+      - name: Run linter
+        run: devbox run lint
 
   test:
     name: Run tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs:
       - deps
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: install dependencies
+        uses: jetify-com/devbox-install-action@v0.12.0
         with:
-          go-version-file: go.mod
-          cache-dependency-path: ./go.sum
-      - run: go version
+          enable-cache: 'true'
+          refresh-cli: 'false'
+          devbox-version: '0.16.0'
 
       - name: Run tests
-        run: go test -v ./...
+        run: devbox run test
+
+
+  intergration-tests:
+    name: Run integration tests
+    runs-on: ubuntu-latest
+    needs:
+      - deps
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+      - name: install dependencies
+        uses: jetify-com/devbox-install-action@v0.12.0
+        with:
+          enable-cache: 'true'
+          refresh-cli: 'false'
+          devbox-version: '0.16.0'
+
+      - name: Run integration tests
+        run: devbox run integration-test
 
   build-push:
     name: Build, Push
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs:
-      - deps
       - test
+      - lint
+      - intergration-tests
     permissions:
       contents: read
       id-token: write
@@ -47,34 +91,15 @@ jobs:
       - name: Code checkout
         uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: install dependencies
+        uses: jetify-com/devbox-install-action@v0.12.0
         with:
-          go-version-file: go.mod
-          cache-dependency-path: ./go.sum
+          enable-cache: 'true'
+          refresh-cli: 'false'
+          devbox-version: '0.16.0'
 
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          token_format: access_token
-          workload_identity_provider: ${{ vars.IDF_PROVIDER }}
-          service_account: ${{ vars.SERVICE_ACCOUNT }}
-          audience: ${{ vars.WORKLOAD_IDF_AUDIENCE}}
-
-      - name: Login to Google Artifact Registry in us
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ vars.GCP_REGISTRY }}
-          username: oauth2accesstoken
-          password: ${{ steps.auth.outputs.access_token }}
 
       - name: Build
-        run: make build-ar
+        run: devbox run build-ar
         env:
           GAR: ${{ vars.GCP_REGISTRY}}
-
-      - name: Push
-        run: make push-ar
-        env:
-          GAR: ${{ vars.GCP_REGISTRY}}
- 

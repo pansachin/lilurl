@@ -39,7 +39,11 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("failed to close database", "error", err)
+		}
+	}()
 
 	logger.Info("initializing fiber app")
 	// Initialize the Fiber app
@@ -67,10 +71,8 @@ func run(logger *slog.Logger) error {
 	routes.RegisterRoutes(app, db, logger)
 
 	logger.Info("starting server")
-	app.Listen(":"+cfg.App.Port, fiber.ListenConfig{
+	return app.Listen(":"+cfg.App.Port, fiber.ListenConfig{
 		// EnablePrefork:     true,
 		EnablePrintRoutes: cfg.Log.PrintRoutes,
 	})
-
-	return nil
 }

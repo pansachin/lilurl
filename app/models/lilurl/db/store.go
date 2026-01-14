@@ -133,7 +133,11 @@ func (s *Store) GetByID(id int64) (LilURL, error) {
 	if err != nil {
 		return LilURL{}, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			s.logger.Error("failed to close rows", "error", err)
+		}
+	}()
 	for rows.Next() {
 		if err := rows.StructScan(&result); err != nil {
 			return LilURL{}, err
@@ -174,7 +178,11 @@ func (s *Store) GetByShortURL(short string) (LilURL, error) {
 	if err != nil {
 		return LilURL{}, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			s.logger.Error("failed to close rows", "error", err)
+		}
+	}()
 	for rows.Next() {
 		if err := rows.StructScan(&result); err != nil {
 			return LilURL{}, err

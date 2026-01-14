@@ -51,10 +51,10 @@ git clone https://github.com/pansachin/lilurl.git
 cd lilurl
 ```
 
-### Install Dependencies
-
+### Install devbox
 ```bash
-go mod download
+curl -fsSL https://get.devbox.sh | bash
+devbox shell
 ```
 
 ### Set Up Database
@@ -65,6 +65,12 @@ echo "DATABASE_URL=sqlite:schema/lilurl.db" > .env
 
 # Run migrations
 make migrate
+```
+
+### Run the Application
+
+```bash
+go run .
 ```
 
 ### Build and Run Locally
