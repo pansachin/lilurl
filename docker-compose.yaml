@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   lilurl:
     container_name: lilurl

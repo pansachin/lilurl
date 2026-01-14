@@ -47,6 +47,9 @@
       ],
       "down":[
         "task down"
+      ],
+      "integration-test":[
+        "task integration-test"
       ]
     }
   }

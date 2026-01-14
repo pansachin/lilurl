@@ -75,12 +75,7 @@ jobs:
           devbox-version: '0.16.0'
 
       - name: Run integration tests
-        run: |
-          colima start
-          devbox run up
-          devbox run migrate
-          curl --retry 5 --retry-delay 2 --retry-connrefused curl -v -H 'Content-Type: application/json' 'http://127.0.0.1:3000/api/v1/46O9Laf' | jq .
-          devbox run down
+        run: devbox run integration-test
 
   build-push:
     name: Build, Push

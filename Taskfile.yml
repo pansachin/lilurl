@@ -78,3 +78,12 @@ tasks:
     desc: Install Go module dependencies
     cmds:
       - go mod download
+
+  integration-test:
+    desc: Run integration tests
+    cmds:
+      - colima start
+      - task: up
+      -  task: migrate
+      - "curl --retry 5 --retry-delay 2 --retry-connrefused -v -H 'Content-Type: application/json' 'http://127.0.0.1:3000/api/v1/46O9Laf' | jq ."
+      - task: down
