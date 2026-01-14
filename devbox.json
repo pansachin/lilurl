@@ -15,8 +15,7 @@
   ],
   "shell": {
     "init_hook": [
-      "echo 'Welcome to devbox!' > /dev/null",
-      "colima start"
+      "echo 'Welcome to devbox!' > /dev/null"
     ],
     "scripts": {
       "build": [
@@ -42,6 +41,12 @@
       ],
       "build-ar": [
         "task build-ar"
+      ],
+      "up":[
+        "task up"
+      ],
+      "down":[
+        "task down"
       ]
     }
   }
