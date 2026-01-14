@@ -10,11 +10,11 @@ jobs:
       - name: Code checkout
         uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: ./go.sum
-      - run: go mod download
+      - name: install dependencies
+        uses: jetify-com/devbox-install-action@v0.12.0
+
+      - name: Download dependencies
+        run: devbox run deps
 
   test:
     name: Run tests
@@ -25,14 +25,11 @@ jobs:
       - name: Code checkout
         uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: ./go.sum
-      - run: go version
+      - name: install dependencies
+        uses: jetify-com/devbox-install-action@v0.12.0
 
       - name: Run tests
-        run: go test -v ./...
+        run: devbox run test
 
   build-push:
     name: Build, Push
@@ -47,34 +44,37 @@ jobs:
       - name: Code checkout
         uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: ./go.sum
+      - name: install dependencies
+        uses: jetify-com/devbox-install-action@v0.12.0
 
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          token_format: access_token
-          workload_identity_provider: ${{ vars.IDF_PROVIDER }}
-          service_account: ${{ vars.SERVICE_ACCOUNT }}
-          audience: ${{ vars.WORKLOAD_IDF_AUDIENCE}}
+      # - uses: actions/setup-go@v5
+      #   with:
+      #     go-version-file: go.mod
+      #     cache-dependency-path: ./go.sum
 
-      - name: Login to Google Artifact Registry in us
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ vars.GCP_REGISTRY }}
-          username: oauth2accesstoken
-          password: ${{ steps.auth.outputs.access_token }}
+      # - name: Authenticate to Google Cloud
+      #   id: auth
+      #   uses: google-github-actions/auth@v2
+      #   with:
+      #     token_format: access_token
+      #     workload_identity_provider: ${{ vars.IDF_PROVIDER }}
+      #     service_account: ${{ vars.SERVICE_ACCOUNT }}
+      #     audience: ${{ vars.WORKLOAD_IDF_AUDIENCE}}
+
+      # - name: Login to Google Artifact Registry in us
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ${{ vars.GCP_REGISTRY }}
+      #     username: oauth2accesstoken
+      #     password: ${{ steps.auth.outputs.access_token }}
 
       - name: Build
-        run: make build-ar
+        run: devbox run build-ar
         env:
           GAR: ${{ vars.GCP_REGISTRY}}
 
-      - name: Push
-        run: make push-ar
-        env:
-          GAR: ${{ vars.GCP_REGISTRY}}
+      # - name: Push
+      #   run: make push-ar
+      #   env:
+      #     GAR: ${{ vars.GCP_REGISTRY}}
  
