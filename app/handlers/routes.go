@@ -26,9 +26,7 @@ func RegisterRoutes(app *fiber.App, db *sqlx.DB, log *slog.Logger, rl *config.Ra
 	app.Get("/api/v1/:id", h.GetByID)
 
 	// Create a new short url with stricter per-route rate limit.
-	// In Fiber v3, app.Post(path, handler, middleware...) executes middleware
-	// before the handler — the variadic middleware args run first in order,
-	// then the handler runs last (see router.go register()).
+	// Handlers execute left-to-right: limiter runs first, then the handler.
 	// Uses a "create:" key prefix to keep its counter separate from the global limiter.
 	// Configurable via rate_limit.create_max and rate_limit.create_window_secs in config.yaml.
 	createLimiter := limiter.New(limiter.Config{
@@ -39,5 +37,5 @@ func RegisterRoutes(app *fiber.App, db *sqlx.DB, log *slog.Logger, rl *config.Ra
 		},
 		LimiterMiddleware: limiter.SlidingWindow{},
 	})
-	app.Post("/api/v1/lilurl", h.Create, createLimiter)
+	app.Post("/api/v1/lilurl", createLimiter, h.Create)
 }
