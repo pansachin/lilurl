@@ -13,3 +13,8 @@ log:
   json: true
   clolour: true
   print_routes: false
+rate_limit:
+  max: 60
+  window_secs: 60
+  create_max: 10
+  create_window_secs: 60

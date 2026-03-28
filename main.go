@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	sqlitedb "github.com/pansachin/lilurl/pkg/database/sqlite"
 
 	routes "github.com/pansachin/lilurl/app/handlers"
@@ -62,9 +64,16 @@ func run(logger *slog.Logger) error {
 		return c.Next()
 	})
 
+	// Configure global rate limiter
+	app.Use(limiter.New(limiter.Config{
+		Max:               cfg.RateLimit.Max,
+		Expiration:        time.Duration(cfg.RateLimit.WindowSecs) * time.Second,
+		LimiterMiddleware: limiter.SlidingWindow{},
+	}))
+
 	logger.Info("registering routes")
 	// Register routes
-	routes.RegisterRoutes(app, db, logger)
+	routes.RegisterRoutes(app, db, logger, &cfg.RateLimit)
 
 	logger.Info("starting server")
 	app.Listen(":"+cfg.App.Port, fiber.ListenConfig{

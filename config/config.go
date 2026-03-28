@@ -32,11 +32,20 @@ type Log struct {
 	PrintRoutes bool `yaml:"print_routes" json:"print_routes"`
 }
 
+// RateLimit holds rate limiting configuration
+type RateLimit struct {
+	Max              int `yaml:"max" json:"max"`
+	WindowSecs       int `yaml:"window_secs" json:"window_secs"`
+	CreateMax        int `yaml:"create_max" json:"create_max"`
+	CreateWindowSecs int `yaml:"create_window_secs" json:"create_window_secs"`
+}
+
 // Config holds application configuration
 type Config struct {
-	App App `yaml:"app" json:"app"`
-	DB  DB  `yaml:"db" json:"db"`
-	Log Log `yaml:"log" json:"log"`
+	App       App       `yaml:"app" json:"app"`
+	DB        DB        `yaml:"db" json:"db"`
+	Log       Log       `yaml:"log" json:"log"`
+	RateLimit RateLimit `yaml:"rate_limit" json:"rate_limit"`
 }
 
 // Read accepts multiple file paths and return last valid configuration.
