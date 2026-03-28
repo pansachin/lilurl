@@ -25,11 +25,20 @@ func RegisterRoutes(app *fiber.App, db *sqlx.DB, log *slog.Logger, rl *config.Ra
 	// Get a details by id
 	app.Get("/api/v1/:id", h.GetByID)
 
-	// Create a new short url (stricter rate limit)
-	createLimiter := limiter.New(limiter.Config{
-		Max:               rl.CreateMax,
-		Expiration:        time.Duration(rl.CreateWindowSecs) * time.Second,
+	// Stricter rate limit for URL creation
+	app.Use(limiter.New(limiter.Config{
+		Max:        rl.CreateMax,
+		Expiration: time.Duration(rl.CreateWindowSecs) * time.Second,
+		Next: func(c fiber.Ctx) bool {
+			// Only apply to POST /api/v1/lilurl
+			return !(c.Method() == fiber.MethodPost && c.Path() == "/api/v1/lilurl")
+		},
+		KeyGenerator: func(c fiber.Ctx) string {
+			return "create:" + c.IP()
+		},
 		LimiterMiddleware: limiter.SlidingWindow{},
-	})
-	app.Post("/api/v1/lilurl", createLimiter, h.Create)
+	}))
+
+	// Create a new short url
+	app.Post("/api/v1/lilurl", h.Create)
 }
