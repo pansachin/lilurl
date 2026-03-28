@@ -64,7 +64,9 @@ func run(logger *slog.Logger) error {
 		return c.Next()
 	})
 
-	// Configure global rate limiter
+	// Global rate limiter — applies to all endpoints (GET redirects, API reads, etc.).
+	// Uses sliding window algorithm with in-memory storage, keyed by client IP.
+	// Configurable via rate_limit.max and rate_limit.window_secs in config.yaml.
 	app.Use(limiter.New(limiter.Config{
 		Max:               cfg.RateLimit.Max,
 		Expiration:        time.Duration(cfg.RateLimit.WindowSecs) * time.Second,

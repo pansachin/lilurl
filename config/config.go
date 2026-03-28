@@ -32,12 +32,15 @@ type Log struct {
 	PrintRoutes bool `yaml:"print_routes" json:"print_routes"`
 }
 
-// RateLimit holds rate limiting configuration
+// RateLimit holds rate limiting configuration.
+// Two tiers: a global limit (Max/WindowSecs) applies to all endpoints,
+// and a stricter limit (CreateMax/CreateWindowSecs) applies only to URL creation.
+// Both use sliding window algorithm with in-memory storage, keyed by client IP.
 type RateLimit struct {
-	Max              int `yaml:"max" json:"max"`
-	WindowSecs       int `yaml:"window_secs" json:"window_secs"`
-	CreateMax        int `yaml:"create_max" json:"create_max"`
-	CreateWindowSecs int `yaml:"create_window_secs" json:"create_window_secs"`
+	Max              int `yaml:"max" json:"max"`                           // Global: max requests per window for all endpoints
+	WindowSecs       int `yaml:"window_secs" json:"window_secs"`          // Global: window duration in seconds
+	CreateMax        int `yaml:"create_max" json:"create_max"`            // Create: max URL creation requests per window
+	CreateWindowSecs int `yaml:"create_window_secs" json:"create_window_secs"` // Create: window duration in seconds
 }
 
 // Config holds application configuration
