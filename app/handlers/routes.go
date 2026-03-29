@@ -27,10 +27,10 @@ func RegisterRoutes(app *fiber.App, db *sqlx.DB, log *slog.Logger, rl *config.Ra
 	app.Get("/:lilurl", h.Get)
 
 	// Get details by short url
-	app.Get("/api/v1/:lilurl", h.GetByShortURL)
+	app.Get("/api/v1/short/:lilurl", h.GetByShortURL)
 
-	// Get a details by id
-	app.Get("/api/v1/:id", h.GetByID)
+	// Get details by id
+	app.Get("/api/v1/id/:id", h.GetByID)
 
 	// Create a new short url with stricter per-route rate limit.
 	// Handlers execute left-to-right: limiter runs first, then the handler.

@@ -61,9 +61,8 @@ func (h *Handler) GetByID(c fiber.Ctx) error {
 			"error": "id must be a number",
 		})
 	}
-	int64Id := int64(intId)
 
-	res, err := h.db.GetByID(int64Id)
+	res, err := h.db.GetByID(int64(intId))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -81,7 +80,7 @@ func (h *Handler) GetByID(c fiber.Ctx) error {
 	})
 }
 
-// GetByShortURL retrieves a lilurl by its ID
+// GetByShortURL retrieves a lilurl by its short URL
 func (h *Handler) GetByShortURL(c fiber.Ctx) error {
 	lilurl := c.Params("lilurl")
 	if lilurl == "" {
