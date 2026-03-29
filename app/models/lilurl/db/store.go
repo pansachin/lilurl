@@ -2,12 +2,15 @@ package store
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pansachin/lilurl/internal/pkg/generator"
 )
+
+var ErrNotFound = errors.New("record not found")
 
 // LilURL model
 type LilURL struct {
@@ -123,7 +126,7 @@ func (s *Store) GetByID(id int64) (LilURL, error) {
 	FROM
 		urls
 	WHERE
-		id = :id`
+		id = :id AND deleted_at IS NULL`
 
 	// Log query
 	str, values, err := sqlx.Named(q, &args)
@@ -164,7 +167,7 @@ func (s *Store) GetByShortURL(short string) (LilURL, error) {
 	FROM
 		urls
 	WHERE
-		short = :short`
+		short = :short AND deleted_at IS NULL`
 
 	// Log query
 	str, values, err := sqlx.Named(q, &args)
@@ -182,4 +185,41 @@ func (s *Store) GetByShortURL(short string) (LilURL, error) {
 	}
 
 	return result, nil
+}
+
+// Delete performs a soft delete by setting deleted_at
+func (s *Store) Delete(id int64) error {
+	args := struct {
+		ID        int64     `db:"id"`
+		DeletedAt time.Time `db:"deleted_at"`
+	}{
+		ID:        id,
+		DeletedAt: time.Now().Truncate(time.Second),
+	}
+
+	q := `
+	UPDATE
+		urls
+	SET
+		deleted_at = :deleted_at
+	WHERE
+		id = :id AND deleted_at IS NULL`
+
+	str, values, err := sqlx.Named(q, &args)
+	s.logger.Debug("soft delete by id", "str", str, "values", values, "err", err)
+
+	res, err := sqlx.NamedExecContext(context.Background(), s.db, q, &args)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
 }
