@@ -14,9 +14,9 @@ type LilURL struct {
 
 // CreateLilURL model
 type CreateLilURL struct {
-	Long      string    `json:"long_url" validate:"required"`
+	Long      string    `json:"long_url" validate:"required,url"`
 	Short     string    `json:"short"`
-	CretedAt  time.Time `json:"created_at" validate:"required"`
+	CreatedAt  time.Time `json:"created_at" validate:"required"`
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

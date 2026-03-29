@@ -31,7 +31,7 @@ func (c *Core) Create(payload CreateLilURL) (LilURL, error) {
 	data := store.LilURL{
 		Long:      payload.Long,
 		Short:     payload.Short,
-		CreatedAt: payload.CretedAt,
+		CreatedAt: payload.CreatedAt,
 		UpdatedAt: payload.UpdatedAt,
 	}
 
