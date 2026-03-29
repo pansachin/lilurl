@@ -16,6 +16,13 @@ func RegisterRoutes(app *fiber.App, db *sqlx.DB, log *slog.Logger, rl *config.Ra
 	// Initialize the handler
 	h := lilurl.NewHandler(db, log)
 
+	// Health check
+	app.Get("/health", func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status": "ok",
+		})
+	})
+
 	// URL redirection
 	app.Get("/:lilurl", h.Get)
 
@@ -38,4 +45,7 @@ func RegisterRoutes(app *fiber.App, db *sqlx.DB, log *slog.Logger, rl *config.Ra
 		LimiterMiddleware: limiter.SlidingWindow{},
 	})
 	app.Post("/api/v1/lilurl", createLimiter, h.Create)
+
+	// Delete a short url by id (soft delete)
+	app.Delete("/api/v1/:id", h.Delete)
 }

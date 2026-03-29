@@ -77,6 +77,11 @@ func (c *Core) GetByShortURL(short string) (LilURL, error) {
 	return toLilURL(result), nil
 }
 
+// Delete soft-deletes a lilurl by its ID
+func (c *Core) Delete(id int64) error {
+	return c.db.Delete(id)
+}
+
 func toLilURL(data store.LilURL) LilURL {
 	result := (*LilURL)(unsafe.Pointer(&data))
 

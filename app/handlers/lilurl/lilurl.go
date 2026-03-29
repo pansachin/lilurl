@@ -1,6 +1,7 @@
 package lilurl
 
 import (
+	"errors"
 	"log/slog"
 	"strconv"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/jmoiron/sqlx"
 	model "github.com/pansachin/lilurl/app/models/lilurl"
+	store "github.com/pansachin/lilurl/app/models/lilurl/db"
 )
 
 type Handler struct {
@@ -104,6 +106,36 @@ func (h *Handler) GetByShortURL(c fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"result": res,
 	})
+}
+
+// Delete soft-deletes a lilurl by its ID
+func (h *Handler) Delete(c fiber.Ctx) error {
+	id := c.Params("id")
+	if id == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "id is required",
+		})
+	}
+
+	intId, err := strconv.Atoi(id)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "id must be a number",
+		})
+	}
+
+	if err := h.db.Delete(int64(intId)); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // Get return the original URL by lilurl
