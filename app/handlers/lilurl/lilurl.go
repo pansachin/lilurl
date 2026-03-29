@@ -46,63 +46,44 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	})
 }
 
-// GetByID retrieves a lilurl by its ID
-func (h *Handler) GetByID(c fiber.Ctx) error {
-	id := c.Params("id")
-	if id == "" {
+// GetByParam retrieves a lilurl by ID (numeric) or short URL (alphanumeric)
+func (h *Handler) GetByParam(c fiber.Ctx) error {
+	param := c.Params("param")
+	if param == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "id is required",
+			"error": "param is required",
 		})
 	}
 
-	intId, err := strconv.Atoi(id)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "id must be a number",
-		})
-	}
-	int64Id := int64(intId)
-
-	res, err := h.db.GetByID(int64Id)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
-	if res.ID == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "not found",
+	// If numeric, look up by ID; otherwise by short URL
+	if intId, err := strconv.Atoi(param); err == nil {
+		res, err := h.db.GetByID(int64(intId))
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		if res.ID == 0 {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "not found",
+			})
+		}
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"result": res,
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"result": res,
-	})
-}
-
-// GetByShortURL retrieves a lilurl by its ID
-func (h *Handler) GetByShortURL(c fiber.Ctx) error {
-	lilurl := c.Params("lilurl")
-	if lilurl == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "hash is required",
-		})
-	}
-
-	res, err := h.db.GetByShortURL(lilurl)
+	res, err := h.db.GetByShortURL(param)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
-
 	if res.ID == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "not found",
 		})
 	}
-
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"result": res,
 	})
