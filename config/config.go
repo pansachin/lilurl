@@ -10,9 +10,10 @@ import (
 
 // App holds applciation configuration
 type App struct {
-	Name string `yaml:"name" json:"name"`
-	Host string `yaml:"host" json:"host"`
-	Port string `yaml:"port" json:"port"`
+	Name       string `yaml:"name" json:"name"`
+	Host       string `yaml:"host" json:"host"`
+	Port       string `yaml:"port" json:"port"`
+	CORSOrigin string `yaml:"cors_origin" json:"cors_origin"`
 }
 
 // DB holds database configuration

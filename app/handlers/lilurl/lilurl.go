@@ -31,7 +31,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	}
 
 	now := time.Now().Truncate(time.Second)
-	payload.CretedAt = now
+	payload.CreatedAt = now
 	payload.UpdatedAt = now
 	res, err := h.db.Create(payload)
 	if err != nil {
@@ -68,6 +68,12 @@ func (h *Handler) GetByID(c fiber.Ctx) error {
 		})
 	}
 
+	if res.ID == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "not found",
+		})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"result": res,
 	})
@@ -89,6 +95,12 @@ func (h *Handler) GetByShortURL(c fiber.Ctx) error {
 		})
 	}
 
+	if res.ID == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "not found",
+		})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"result": res,
 	})
@@ -107,6 +119,12 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
+		})
+	}
+
+	if res.ID == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "not found",
 		})
 	}
 
