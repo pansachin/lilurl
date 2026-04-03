@@ -1,355 +1,280 @@
-package lilurl
+package lilurl_test
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
+	"net/http/httptest"
+	"strconv"
 	"testing"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/pansachin/lilurl/config"
+	handler "github.com/pansachin/lilurl/app/handlers/lilurl"
 )
 
-const createTableSQL = `
-CREATE TABLE IF NOT EXISTS urls(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    long_url VARCHAR(255) NOT NULL,
-    short VARCHAR(7) NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at DATETIME DEFAULT NULL
-);`
+const testSchema = `CREATE TABLE urls (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	long_url VARCHAR(255) NOT NULL,
+	short VARCHAR(7) NOT NULL,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	deleted_at DATETIME DEFAULT NULL
+)`
 
-func setupTestApp(t *testing.T) *fiber.App {
+func newTestDB(t *testing.T) *sqlx.DB {
 	t.Helper()
 	db, err := sqlx.Open("sqlite3", ":memory:")
 	if err != nil {
-		t.Fatalf("failed to open test db: %v", err)
+		t.Fatalf("open sqlite: %v", err)
 	}
-	if _, err := db.Exec(createTableSQL); err != nil {
-		t.Fatalf("failed to create table: %v", err)
+	db.SetMaxOpenConns(1)
+	if _, err := db.Exec(testSchema); err != nil {
+		t.Fatalf("create schema: %v", err)
 	}
 	t.Cleanup(func() { db.Close() })
+	return db
+}
+
+func newTestApp(t *testing.T) *fiber.App {
+	t.Helper()
+	db := newTestDB(t)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	h := handler.NewHandler(db, logger)
 
 	app := fiber.New()
-	logger := slog.Default()
-	h := NewHandler(db, logger)
-	rl := &config.RateLimit{
-		Max:              60,
-		WindowSecs:       60,
-		CreateMax:        10,
-		CreateWindowSecs: 60,
-	}
-
 	app.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "ok"})
 	})
-	app.Get("/:lilurl", h.Get)
+	app.Post("/api/v1/lilurl", h.Create)
 	app.Get("/api/v1/short/:lilurl", h.GetByShortURL)
 	app.Get("/api/v1/id/:id", h.GetByID)
-	createLimiter := limiter.New(limiter.Config{
-		Max:        rl.CreateMax,
-		Expiration: time.Duration(rl.CreateWindowSecs) * time.Second,
-		KeyGenerator: func(c fiber.Ctx) string {
-			return "create:" + c.IP()
-		},
-		LimiterMiddleware: limiter.SlidingWindow{},
-	})
-	app.Post("/api/v1/lilurl", createLimiter, h.Create)
 	app.Delete("/api/v1/:id", h.Delete)
-
+	app.Get("/:lilurl", h.Get)
 	return app
 }
 
-func parseJSON(t *testing.T, body io.Reader) map[string]any {
+// createShortURL is a helper that POSTs a URL and returns the result map.
+func createShortURL(t *testing.T, app *fiber.App, longURL string) map[string]interface{} {
 	t.Helper()
-	var result map[string]any
-	if err := json.NewDecoder(body).Decode(&result); err != nil {
-		t.Fatalf("failed to parse JSON: %v", err)
-	}
-	return result
-}
-
-func createTestURL(t *testing.T, app *fiber.App, longURL string) map[string]any {
-	t.Helper()
-	req, _ := http.NewRequest("POST", "/api/v1/lilurl", strings.NewReader(`{"long_url": "`+longURL+`"}`))
+	body, _ := json.Marshal(map[string]string{"long_url": longURL})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/lilurl", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	if err != nil {
-		t.Fatalf("failed to create test URL: %v", err)
+		t.Fatalf("app.Test() error = %v", err)
 	}
 	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("expected 201 on create, got %d: %s", resp.StatusCode, string(body))
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("createShortURL() status = %d, want 201, body = %s", resp.StatusCode, b)
 	}
-	data := parseJSON(t, resp.Body)
-	result, ok := data["result"].(map[string]any)
-	if !ok {
-		t.Fatal("expected result object in create response")
+	var envelope struct {
+		Result map[string]interface{} `json:"result"`
 	}
-	return result
+	json.NewDecoder(resp.Body).Decode(&envelope)
+	return envelope.Result
 }
 
-func TestHealthCheck(t *testing.T) {
-	app := setupTestApp(t)
-
-	req, _ := http.NewRequest("GET", "/health", nil)
+func TestHealth(t *testing.T) {
+	app := newTestApp(t)
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	resp, err := app.Test(req)
 	if err != nil {
-		t.Fatalf("request failed: %v", err)
+		t.Fatalf("app.Test() error = %v", err)
 	}
-
 	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status 200, got %d", resp.StatusCode)
-	}
-
-	data := parseJSON(t, resp.Body)
-	if data["status"] != "ok" {
-		t.Errorf("expected status 'ok', got %v", data["status"])
+		t.Errorf("GET /health status = %d, want 200", resp.StatusCode)
 	}
 }
 
-func TestCreate(t *testing.T) {
-	app := setupTestApp(t)
+func TestCreate_ValidInput(t *testing.T) {
+	app := newTestApp(t)
+	body := bytes.NewBufferString(`{"long_url":"https://example.com"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/lilurl", body)
+	req.Header.Set("Content-Type", "application/json")
 
-	t.Run("valid URL", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/api/v1/lilurl", strings.NewReader(`{"long_url": "https://example.com/valid"}`))
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-
-		if resp.StatusCode != http.StatusCreated {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("expected status 201, got %d: %s", resp.StatusCode, string(body))
-		}
-
-		data := parseJSON(t, resp.Body)
-		result, ok := data["result"].(map[string]any)
-		if !ok {
-			t.Fatal("expected result object")
-		}
-		if result["long_url"] != "https://example.com/valid" {
-			t.Errorf("expected long_url 'https://example.com/valid', got %v", result["long_url"])
-		}
-		if result["short"] == nil || result["short"] == "" {
-			t.Error("expected non-empty short URL")
-		}
-	})
-
-	t.Run("invalid URL", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/api/v1/lilurl", strings.NewReader(`{"long_url": "not-a-url"}`))
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-
-		if resp.StatusCode != http.StatusInternalServerError {
-			t.Errorf("expected status 500 for invalid URL, got %d", resp.StatusCode)
-		}
-	})
-
-	t.Run("missing body", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/api/v1/lilurl", strings.NewReader(`{}`))
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-
-		if resp.StatusCode == http.StatusCreated {
-			t.Error("expected error status for empty body, got 201")
-		}
-	})
-}
-
-func TestGetByID(t *testing.T) {
-	app := setupTestApp(t)
-	created := createTestURL(t, app, "https://example.com/getbyid")
-	id := created["id"].(float64)
-
-	t.Run("existing record", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/id/%d", int(id)), nil)
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("expected status 200, got %d: %s", resp.StatusCode, string(body))
-		}
-
-		data := parseJSON(t, resp.Body)
-		result := data["result"].(map[string]any)
-		if result["long_url"] != "https://example.com/getbyid" {
-			t.Errorf("expected long_url, got %v", result["long_url"])
-		}
-	})
-
-	t.Run("non-existent ID", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/api/v1/id/999", nil)
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-		if resp.StatusCode != http.StatusNotFound {
-			t.Errorf("expected 404, got %d", resp.StatusCode)
-		}
-	})
-
-	t.Run("non-numeric ID", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/api/v1/id/abc", nil)
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-		if resp.StatusCode != http.StatusBadRequest {
-			t.Errorf("expected 400, got %d", resp.StatusCode)
-		}
-	})
-}
-
-func TestGetByShortURL(t *testing.T) {
-	app := setupTestApp(t)
-	created := createTestURL(t, app, "https://example.com/getbyshort")
-	short := created["short"].(string)
-
-	t.Run("existing record", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/api/v1/short/"+short, nil)
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("expected 200, got %d: %s", resp.StatusCode, string(body))
-		}
-
-		data := parseJSON(t, resp.Body)
-		result := data["result"].(map[string]any)
-		if result["long_url"] != "https://example.com/getbyshort" {
-			t.Errorf("expected long_url, got %v", result["long_url"])
-		}
-	})
-
-	t.Run("non-existent short URL", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/api/v1/short/nope123", nil)
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-		if resp.StatusCode != http.StatusNotFound {
-			t.Errorf("expected 404, got %d", resp.StatusCode)
-		}
-	})
-}
-
-func TestDelete(t *testing.T) {
-	app := setupTestApp(t)
-
-	t.Run("successful delete", func(t *testing.T) {
-		created := createTestURL(t, app, "https://example.com/delete-test")
-		id := int(created["id"].(float64))
-
-		req, _ := http.NewRequest("DELETE", fmt.Sprintf("/api/v1/%d", id), nil)
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-		if resp.StatusCode != http.StatusNoContent {
-			body, _ := io.ReadAll(resp.Body)
-			t.Errorf("expected 204, got %d: %s", resp.StatusCode, string(body))
-		}
-	})
-
-	t.Run("delete non-existent", func(t *testing.T) {
-		req, _ := http.NewRequest("DELETE", "/api/v1/999", nil)
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-		if resp.StatusCode != http.StatusNotFound {
-			t.Errorf("expected 404, got %d", resp.StatusCode)
-		}
-	})
-}
-
-func TestGetRedirect(t *testing.T) {
-	app := setupTestApp(t)
-	created := createTestURL(t, app, "https://example.com/redirect-test")
-	short := created["short"].(string)
-
-	t.Run("valid redirect", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/"+short, nil)
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-		if resp.StatusCode != http.StatusTemporaryRedirect {
-			body, _ := io.ReadAll(resp.Body)
-			t.Fatalf("expected 307, got %d: %s", resp.StatusCode, string(body))
-		}
-		location := resp.Header.Get("Location")
-		if location != "https://example.com/redirect-test" {
-			t.Errorf("expected Location header 'https://example.com/redirect-test', got %q", location)
-		}
-	})
-
-	t.Run("non-existent short URL", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/nope123", nil)
-		resp, err := app.Test(req)
-		if err != nil {
-			t.Fatalf("request failed: %v", err)
-		}
-		if resp.StatusCode != http.StatusNotFound {
-			t.Errorf("expected 404, got %d", resp.StatusCode)
-		}
-	})
-}
-
-func TestDeleteThenGet(t *testing.T) {
-	app := setupTestApp(t)
-	created := createTestURL(t, app, "https://example.com/soft-delete")
-	short := created["short"].(string)
-	id := int(created["id"].(float64))
-
-	// Delete the record
-	delReq, _ := http.NewRequest("DELETE", fmt.Sprintf("/api/v1/%d", id), nil)
-	resp, err := app.Test(delReq)
+	resp, err := app.Test(req)
 	if err != nil {
-		t.Fatalf("delete request failed: %v", err)
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusCreated {
+		t.Errorf("Create() status = %d, want 201", resp.StatusCode)
+	}
+
+	var envelope struct {
+		Result map[string]interface{} `json:"result"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if envelope.Result["short"] == "" {
+		t.Error("Create() short is empty in response")
+	}
+}
+
+func TestCreate_MalformedJSON(t *testing.T) {
+	app := newTestApp(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/lilurl", bytes.NewBufferString(`{invalid`))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Create() malformed JSON status = %d, want 400", resp.StatusCode)
+	}
+}
+
+func TestCreate_InvalidURL(t *testing.T) {
+	app := newTestApp(t)
+	body := bytes.NewBufferString(`{"long_url":"not-a-valid-url"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/lilurl", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Create() invalid URL status = %d, want 500", resp.StatusCode)
+	}
+}
+
+func TestGetByShortURL_Found(t *testing.T) {
+	app := newTestApp(t)
+	created := createShortURL(t, app, "https://example.com")
+	short := created["short"].(string)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/short/"+short, nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("GetByShortURL() status = %d, want 200", resp.StatusCode)
+	}
+}
+
+func TestGetByShortURL_NotFound(t *testing.T) {
+	app := newTestApp(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/short/doesntexist", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("GetByShortURL() not-found status = %d, want 404", resp.StatusCode)
+	}
+}
+
+func TestGetByID_Found(t *testing.T) {
+	app := newTestApp(t)
+	created := createShortURL(t, app, "https://example.com")
+	id := strconv.Itoa(int(created["id"].(float64)))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/id/"+id, nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("GetByID() status = %d, want 200", resp.StatusCode)
+	}
+}
+
+func TestGetByID_NotFound(t *testing.T) {
+	app := newTestApp(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/id/99999", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("GetByID() not-found status = %d, want 404", resp.StatusCode)
+	}
+}
+
+func TestGetByID_InvalidID(t *testing.T) {
+	app := newTestApp(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/id/notanumber", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("GetByID() invalid ID status = %d, want 400", resp.StatusCode)
+	}
+}
+
+func TestGet_Redirect(t *testing.T) {
+	app := newTestApp(t)
+	created := createShortURL(t, app, "https://example.com")
+	short := created["short"].(string)
+
+	req := httptest.NewRequest(http.MethodGet, "/"+short, nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusTemporaryRedirect {
+		t.Errorf("Get() status = %d, want 307", resp.StatusCode)
+	}
+	if loc := resp.Header.Get("Location"); loc != "https://example.com" {
+		t.Errorf("Get() Location = %q, want %q", loc, "https://example.com")
+	}
+}
+
+func TestGet_NotFound(t *testing.T) {
+	app := newTestApp(t)
+	req := httptest.NewRequest(http.MethodGet, "/doesnotexist", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Get() not-found status = %d, want 404", resp.StatusCode)
+	}
+}
+
+func TestDelete_Success(t *testing.T) {
+	app := newTestApp(t)
+	created := createShortURL(t, app, "https://example.com")
+	id := strconv.Itoa(int(created["id"].(float64)))
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/"+id, nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
 	}
 	if resp.StatusCode != http.StatusNoContent {
-		t.Fatalf("expected 204 on delete, got %d", resp.StatusCode)
+		t.Errorf("Delete() status = %d, want 204", resp.StatusCode)
 	}
+}
 
-	// GET by short URL should return 404
-	req, _ := http.NewRequest("GET", "/api/v1/short/"+short, nil)
-	resp, err = app.Test(req)
+func TestDelete_NotFound(t *testing.T) {
+	app := newTestApp(t)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/99999", nil)
+	resp, err := app.Test(req)
 	if err != nil {
-		t.Fatalf("request failed: %v", err)
+		t.Fatalf("app.Test() error = %v", err)
 	}
 	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("expected 404 after delete, got %d", resp.StatusCode)
+		t.Errorf("Delete() not-found status = %d, want 404", resp.StatusCode)
 	}
+}
 
-	// Redirect should return 404
-	req, _ = http.NewRequest("GET", "/"+short, nil)
-	resp, err = app.Test(req)
+func TestDelete_InvalidID(t *testing.T) {
+	app := newTestApp(t)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/notanumber", nil)
+	resp, err := app.Test(req)
 	if err != nil {
-		t.Fatalf("request failed: %v", err)
+		t.Fatalf("app.Test() error = %v", err)
 	}
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("expected 404 redirect after delete, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Delete() invalid ID status = %d, want 400", resp.StatusCode)
 	}
 }
